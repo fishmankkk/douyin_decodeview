@@ -67,6 +67,7 @@ const generateStr = function(a) {
 };
 
 let getCookies = function() {
+
   return new Promise(function(resolve, reject) {
       var options = {
           hostname: "douyin.iiilab.com",
@@ -76,6 +77,7 @@ let getCookies = function() {
       };
       var req = http.request(options, function(res) {
           res.setEncoding("utf8");
+
           res.on("data", function(chunk) {
               let cArr = res.headers["set-cookie"];
               let Cookie = "";
@@ -103,9 +105,9 @@ let postAns = function(link, Cookies = "") {
           s: s
       });
       const options = {
-          hostname: "service0.iiilab.com",
+          hostname: "service2.iiilab.com",
           port: 80,
-          path: "/video/web/douyin",
+          path: "/video/douyin",
           method: "POST",
           headers: {
               "Content-Type":
@@ -142,8 +144,9 @@ router.post('/', async function(req, res, next) {
   res.send(videoData);
 });
 
-router.get('/auditing', async function(req, res, next) {
-  res.send({data: true, statusCode: 200});
+router.post('/download', async function(req, res, next) {
+  const link  = req.body.url
+  res.send({tempFilePath: link, statusCode: 200});
 });
 
 module.exports = router;

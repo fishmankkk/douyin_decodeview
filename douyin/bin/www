@@ -6,13 +6,7 @@
 
 var app = require('../app');
 var debug = require('debug')('douyin-pj:server');
-var http = require('http');
-// var http = require('https');
-// var fs = require('fs');
-
-// var privateKey  = fs.readFileSync('/usr/node_pj/douyin/openssl/private.pem', 'utf8');
-// var certificate = fs.readFileSync('/usr/node_pj/douyin/openssl/file.crt', 'utf8');
-// var credentials = {key: privateKey, cert: certificate};
+var http = require('https');
 
 /**
  * Get port from environment and store in Express.
@@ -25,7 +19,6 @@ app.set('port', port);
  * Create HTTP server.
  */
 
-// var server = http.createServer(credentials, app);
 var server = http.createServer(app);
 
 /**
