@@ -2,7 +2,8 @@ var express = require('express');
 const http = require("http");
 const querystring = require("querystring");
 var router = express.Router();
-
+var request = require('request');
+var fs = require('fs');
 
 const generateStr = function(a) {
   var c = (function() {
@@ -96,7 +97,7 @@ let postAns = function(link, Cookies = "") {
           .toString(10)
           .substring(2);
       const s = generateStr(link + "@" + r).toString(10);
-
+    
       const postData = querystring.stringify({
           link: link,
           r: r,
@@ -111,6 +112,7 @@ let postAns = function(link, Cookies = "") {
               "Content-Type":
                   "application/x-www-form-urlencoded; charset=UTF-8",
               Origin: "http://douyin.iiilab.com",
+              Referer: "http://douyin.iiilab.com/",
               Cookie: Cookies
           }
       };
@@ -118,7 +120,7 @@ let postAns = function(link, Cookies = "") {
           res.setEncoding("utf-8");
           res.on("data", function(chun) {
               // console.log("body分隔线---------------------------------\r\n");
-              // console.info(chun);
+            //   console.info(chun);
               DATA = chun;
               resolve(DATA);
           });
@@ -137,8 +139,14 @@ let postAns = function(link, Cookies = "") {
 router.post('/', async function(req, res, next) {
   const link  = req.body.url
   let Cookies = await getCookies();
+//   console.log('Cookies', Cookies)
   let reData = await postAns(link, Cookies);
   const videoData = JSON.parse(reData).data;
+  if(videoData){
+    let timestamp = Date.parse(new Date());
+    request(videoData.video).pipe(fs.createWriteStream('public/video/' + timestamp+ '.mp4'));
+    videoData.curVideo = '/public/video/' + timestamp+ '.mp4';
+  }
   res.send(videoData);
 });
 
