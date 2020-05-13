@@ -1,157 +1,194 @@
-var express = require('express');
-const http = require("http");
-const querystring = require("querystring");
-var router = express.Router();
-var request = require('request');
-var fs = require('fs');
+const router = require('koa-router')()
+const axios = require('axios')
+const fs = require('fs')
+var path = require('path')
+const dayjs = require('dayjs')
+const cheerio = require('cheerio')
+const {
+    getString,
+    getIPAddress
+} = require('../utils/help')
+const {
+    ipAddress
+} = require('../utils/config')
 
-const generateStr = function(a) {
-  var c = (function() {
-          for (var d = 0, f = new Array(256), g = 0; 256 != g; ++g) {
-              (d = g),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (d = 1 & d ? -306674912 ^ (d >>> 1) : d >>> 1),
-                  (f[g] = d);
-          }
-          return "undefined" != typeof Int32Array ? new Int32Array(f) : f;
-      })(),
-      b = function(g) {
-          for (var j, k, h = -1, f = 0, d = g.length; f < d; ) {
-              (j = g.charCodeAt(f++)),
-                  j < 128
-                      ? (h = (h >>> 8) ^ c[255 & (h ^ j)])
-                      : j < 2048
-                          ? ((h =
-                                (h >>> 8) ^
-                                c[255 & (h ^ (192 | ((j >> 6) & 31)))]),
-                            (h = (h >>> 8) ^ c[255 & (h ^ (128 | (63 & j)))]))
-                          : j >= 55296 && j < 57344
-                              ? ((j = (1023 & j) + 64),
-                                (k = 1023 & g.charCodeAt(f++)),
-                                (h =
-                                    (h >>> 8) ^
-                                    c[255 & (h ^ (240 | ((j >> 8) & 7)))]),
-                                (h =
-                                    (h >>> 8) ^
-                                    c[255 & (h ^ (128 | ((j >> 2) & 63)))]),
-                                (h =
-                                    (h >>> 8) ^
-                                    c[
-                                        255 &
-                                            (h ^
-                                                (128 |
-                                                    ((k >> 6) & 15) |
-                                                    ((3 & j) << 4)))
-                                    ]),
-                                (h =
-                                    (h >>> 8) ^
-                                    c[255 & (h ^ (128 | (63 & k)))]))
-                              : ((h =
-                                    (h >>> 8) ^
-                                    c[255 & (h ^ (224 | ((j >> 12) & 15)))]),
-                                (h =
-                                    (h >>> 8) ^
-                                    c[255 & (h ^ (128 | ((j >> 6) & 63)))]),
-                                (h =
-                                    (h >>> 8) ^
-                                    c[255 & (h ^ (128 | (63 & j)))]));
-          }
-          return h ^ -1;
-      };
-  return b(a) >>> 0;
-};
+let requestUrl = `https://v.douyin.com/KWuu31/`
 
-let getCookies = function() {
-  return new Promise(function(resolve, reject) {
-      var options = {
-          hostname: "douyin.iiilab.com",
-          port: 80,
-          path: "/",
-          method: "GET"
-      };
-      var req = http.request(options, function(res) {
-          res.setEncoding("utf8");
-          res.on("data", function(chunk) {
-              let cArr = res.headers["set-cookie"];
-              let Cookie = "";
-              Cookie = cArr[0].split(";")[0] + ";" + cArr[1].split(";")[0];
-              resolve(Cookie);
-          });
-      });
-      req.on("error", function(e) {
-          console.log("problem with request: " + e.message);
-      });
-      req.end();
-  });
-};
-let postAns = function(link, Cookies = "") {
-  return new Promise(function(resolve, reject) {
-      let DATA;
-      const r = Math.random()
-          .toString(10)
-          .substring(2);
-      const s = generateStr(link + "@" + r).toString(10);
-    
-      const postData = querystring.stringify({
-          link: link,
-          r: r,
-          s: s
-      });
-      const options = {
-          hostname: "service0.iiilab.com",
-          port: 80,
-          path: "/video/web/douyin",
-          method: "POST",
-          headers: {
-              "Content-Type":
-                  "application/x-www-form-urlencoded; charset=UTF-8",
-              Origin: "http://douyin.iiilab.com",
-              Referer: "http://douyin.iiilab.com/",
-              Cookie: Cookies
-          }
-      };
-      var req = http.request(options, function(res) {
-          res.setEncoding("utf-8");
-          res.on("data", function(chun) {
-              // console.log("body分隔线---------------------------------\r\n");
-            //   console.info(chun);
-              DATA = chun;
-              resolve(DATA);
-          });
-          res.on("end", function() {
-              // console.log("No more data in response.********");
-          });
-      });
-      req.on("error", function(err) {
-          console.error(err);
-      });
-      req.write(postData);
-      req.end(function() {});
-  });
-};
-/* GET users listing. */
-router.post('/', async function(req, res, next) {
-  const link  = req.body.url
-  let Cookies = await getCookies();
-//   console.log('Cookies', Cookies)
-  let reData = await postAns(link, Cookies);
-  const videoData = JSON.parse(reData).data;
-  if(videoData){
-    let timestamp = Date.parse(new Date());
-    request(videoData.video).pipe(fs.createWriteStream('public/video/' + timestamp+ '.mp4'));
-    videoData.curVideo = '/public/video/' + timestamp+ '.mp4';
-  }
-  res.send(videoData);
-});
+var renderPage = function (requestUrl) {
+    return new Promise((resolve, reject) => {
+        axios
+            .get(requestUrl, {
+                headers: {
+                    'user-agent': ' Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1'
+                }
+            })
+            .then(function (response) {
+                const $ = cheerio.load(response, {
+                    decodeEntities: false
+                })
+                let item_ids = getString($.html(), 'itemId: "', '",')
+                let dytk = getString($.html(), 'dytk: "', '" }')
+                console.log('response', item_ids, dytk)
+                resolve({
+                    item_ids,
+                    dytk
+                })
+            })
+            .catch(function (error) {
+                console.log(error)
+                reject(error)
+            })
+    })
+}
 
-router.get('/auditing', async function(req, res, next) {
-  res.send({data: true, statusCode: 200});
-});
+var getDYVideoUrl = function ({
+    item_ids,
+    dytk
+}) {
+    return new Promise((resolve, reject) => {
+        axios
+            .get(
+                `https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids=${item_ids}&dytk=${dytk}`, {
+                    headers: {
+                        'user-agent': ' Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1'
+                    }
+                }
+            )
+            .then(function (response) {
+                // console.log("response", response.data)
+                let {
+                    status_code,
+                    item_list
+                } = response.data
+                if (status_code === 0) {
+                    let url = item_list[0].video.play_addr.url_list[0].replace(
+                        'playwm',
+                        'play'
+                    )
+                    console.log('url', url)
+                    resolve(url)
+                } else {
+                    reject(status_code)
+                }
+            })
+            .catch(function (error) {
+                console.log(error)
+                reject(error)
+            })
+    })
+}
 
-module.exports = router;
+var getCurrentVideo = function (url) {
+    return new Promise((resolve, reject) => {
+        axios
+            .get(url, {
+                headers: {
+                    'user-agent': ' Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1'
+                }
+            })
+            .then(function (response) {
+                console.log('response: getCurrentVideo', response.data)
+            })
+            .catch(function (error) {
+                console.log(error)
+                reject(error)
+            })
+    })
+}
+async function downloadFile(url, filepath, name) {
+    if (!fs.existsSync(filepath)) {
+        fs.mkdirSync(filepath)
+    }
+    const mypath = path.resolve(filepath, name)
+    const writer = fs.createWriteStream(mypath)
+    const response = await axios({
+        url,
+        method: 'GET',
+        responseType: 'stream'
+    })
+    response.data.pipe(writer)
+    return new Promise((resolve, reject) => {
+        writer.on('finish', resolve)
+        writer.on('error', reject)
+        resolve()
+    })
+}
+
+router.prefix('/douyin')
+
+var buildVideoFilesToUrl = function (url) {
+    return new Promise((resolve, reject) => {
+        renderPage(url)
+            .then(data => {
+                getDYVideoUrl(data)
+                    .then(currentUrl => {
+                        let fileName = `${dayjs().unix()}.mp4`
+                        downloadFile(
+                                currentUrl,
+                                path.join(__dirname, '../public/video'),
+                                fileName
+                            )
+                            .then(() => {
+                                resolve(`${ipAddress}/video/${fileName}`)
+                            })
+                            .catch(() => {
+                                reject('下载出错')
+                            })
+                    })
+                    .catch(() => {
+                        reject('获取无水印链接出错')
+                    })
+            })
+            .catch(() => {
+                reject('爬虫页面出错')
+            })
+    })
+}
+
+router.post('/getCurrentUrl', async function (ctx, next) {
+    let {
+        url
+    } = ctx.request.body
+    await buildVideoFilesToUrl(url).then(cuurentUrl => {
+        ctx.body = {
+            status: true,
+            result: {
+                url: cuurentUrl
+            },
+            msg: '转换成功'
+        }
+    }).catch((err) => {
+        ctx.body = {
+            status: false,
+            result: {
+                msg: err
+            },
+            msg: '转换失败'
+        }
+    })
+})
+
+router.get('/getCurrentUrl', async function (ctx, next) {
+    let {
+        url
+    } = ctx.query
+    await buildVideoFilesToUrl(url).then(cuurentUrl => {
+        ctx.body = {
+            status: true,
+            result: {
+                url: cuurentUrl
+            },
+            msg: '转换成功'
+        }
+    }).catch((err) => {
+        ctx.body = {
+            status: false,
+            result: {
+                msg: err
+            },
+            msg: '转换失败'
+        }
+    })
+})
+
+module.exports = router

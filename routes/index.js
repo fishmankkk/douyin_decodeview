@@ -1,9 +1,11 @@
-var express = require('express');
-var router = express.Router();
+const router = require('koa-router')()
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
-});
+router.get('/', async (ctx, next) => {
+  ctx.state = {
+    title: 'dy project'
+  };
 
-module.exports = router;
+  await ctx.render('index', {});
+})
+
+module.exports = router
