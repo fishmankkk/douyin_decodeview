@@ -15,7 +15,7 @@
     "dayjs": "^1.8.25",
     "debug": "^4.1.1",
     "dingtalk-robot-sender": "^1.2.0",
-    "ejs": "~2.3.3",
+    "ejs": "~2.5.5",
     "iconv-lite": "^0.5.1",
     "jquery": "^3.5.0",
     "jsonp": "^0.2.1",
